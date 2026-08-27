@@ -49,17 +49,14 @@ func TestFormatWeather(t *testing.T) {
 
 	got := formatWeather(weather, location)
 
-	expected := "Weather in Amsterdam, NL:\n\nTemperature: 23.4°C\nFeels like: 22.8°C\nCondition: overcast clouds\nHumidity: 37%%\nWind speed: 8.3 m/s"
-
-	// В fmt.Sprintf в основном коде %% превращается в %.
-	expected = strings.Replace(expected, "37%%", "37%", 1)
+	expected := "Weather in Amsterdam, NL:\n\nTemperature: 23.4°C\nFeels like: 22.8°C\nCondition: overcast clouds\nHumidity: 37%\nWind speed: 8.3 m/s"
 
 	if got != expected {
 		t.Errorf("unexpected result:\nwant: %s\ngot:  %s", expected, got)
 	}
 }
 
-func TestGetJSON(t *testing.T) {
+func TestWeatherClientGetJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -82,9 +79,11 @@ func TestGetJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
+	weatherClient := NewWeatherClient(server.Client(), "test-key")
+
 	var weather WeatherResponse
 
-	err := getJSON(http.DefaultClient, server.URL, &weather)
+	err := weatherClient.getJSON(server.URL, &weather)
 	if err != nil {
 		t.Fatalf("getJSON returned error: %v", err)
 	}
@@ -118,16 +117,18 @@ func TestGetJSON(t *testing.T) {
 	}
 }
 
-func TestGetJSONInvalidJSON(t *testing.T) {
+func TestWeatherClientGetJSONInvalidJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `invalid json`)
 	}))
 	defer server.Close()
 
+	weatherClient := NewWeatherClient(server.Client(), "test-key")
+
 	var weather WeatherResponse
 
-	err := getJSON(http.DefaultClient, server.URL, &weather)
+	err := weatherClient.getJSON(server.URL, &weather)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -137,15 +138,17 @@ func TestGetJSONInvalidJSON(t *testing.T) {
 	}
 }
 
-func TestGetJSONStatusError(t *testing.T) {
+func TestWeatherClientGetJSONStatusError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}))
 	defer server.Close()
 
+	weatherClient := NewWeatherClient(server.Client(), "test-key")
+
 	var weather WeatherResponse
 
-	err := getJSON(http.DefaultClient, server.URL, &weather)
+	err := weatherClient.getJSON(server.URL, &weather)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

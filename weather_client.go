@@ -1,12 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
 
-const geocodingAPIURL = "https://api.openweathermap.org/geo/1.0/reverse"
-const weatherAPIURL = "https://api.openweathermap.org/data/2.5/weather"
+const openWeatherBaseURL = "https://api.openweathermap.org"
+
+const (
+	weatherEndpoint   = "/data/2.5/weather"
+	geocodingEndpoint = "/geo/1.0/reverse"
+)
 
 type LocationResponse struct {
 	Name    string `json:"name"`
@@ -32,11 +37,11 @@ func (w *WeatherClient) getWeather(latitude, longitude float64) (WeatherResponse
 		APIKey:    w.apiKey,
 	}
 
-	url := buildAPIURL(weatherAPIURL, request)
+	url := buildAPIURL(weatherEndpoint, request)
 
 	var weather WeatherResponse
 
-	if err := getJSON(w.httpClient, url, &weather); err != nil {
+	if err := w.getJSON(url, &weather); err != nil {
 		return WeatherResponse{}, fmt.Errorf("get weather: %w", err)
 	}
 
@@ -50,11 +55,11 @@ func (w *WeatherClient) getLocationName(latitude, longitude float64) (LocationRe
 		APIKey:    w.apiKey,
 	}
 
-	url := buildAPIURL(geocodingAPIURL, request)
+	url := buildAPIURL(geocodingEndpoint, request)
 
 	var locations []LocationResponse
 
-	if err := getJSON(w.httpClient, url, &locations); err != nil {
+	if err := w.getJSON(url, &locations); err != nil {
 		return LocationResponse{}, fmt.Errorf("get location: %w", err)
 	}
 
@@ -63,4 +68,22 @@ func (w *WeatherClient) getLocationName(latitude, longitude float64) (LocationRe
 	}
 
 	return locations[0], nil
+}
+
+func (w *WeatherClient) getJSON(url string, result interface{}) error {
+	response, err := w.httpClient.Get(url)
+	if err != nil {
+		return fmt.Errorf("request API: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("API returned status %d", response.StatusCode)
+	}
+
+	if err := json.NewDecoder(response.Body).Decode(result); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+
+	return nil
 }

@@ -12,12 +12,16 @@ type APIRequest struct {
 	APIKey    string
 }
 
-func getJSON(url string, result interface{}) error {
-	response, err := http.Get(url)
+func getJSON(httpClient *http.Client, url string, result interface{}) error {
+	response, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("API returned status %d", response.StatusCode)
+	}
 
 	if err := json.NewDecoder(response.Body).Decode(result); err != nil {
 		return fmt.Errorf("decode response: %w", err)

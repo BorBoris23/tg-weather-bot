@@ -1,16 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
@@ -21,7 +23,14 @@ func main() {
 
 	bot.Debug = true
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	weatherClient := NewWeatherClient(
+		httpClient,
+		os.Getenv("OPENWEATHER_API_KEY"),
+	)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -32,36 +41,36 @@ func main() {
 	}
 
 	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
-
-		if update.Message.Location == nil {
-			continue
-		}
-
-		latitude := update.Message.Location.Latitude
-		longitude := update.Message.Location.Longitude
-
-		weather, err := getWeather(latitude, longitude)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		location, err := getLocationName(latitude, longitude)
-		if err != nil {
-			log.Printf("get location name: %v", err)
-			continue
-		}
-
-		msgText := formatWeather(weather, location)
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
-
-		_, err = bot.Send(msg)
-		if err != nil {
-			log.Println(err)
+		if err := handleUpdate(bot, weatherClient, update); err != nil {
+			log.Printf("handle update: %v", err)
 		}
 	}
+}
+
+func handleUpdate(bot *tgbotapi.BotAPI, weatherClient *WeatherClient, update tgbotapi.Update) error {
+	if update.Message == nil || update.Message.Location == nil {
+		return nil
+	}
+
+	latitude := update.Message.Location.Latitude
+	longitude := update.Message.Location.Longitude
+
+	weather, err := weatherClient.getWeather(latitude, longitude)
+	if err != nil {
+		return fmt.Errorf("get weather: %w", err)
+	}
+
+	location, err := weatherClient.getLocationName(latitude, longitude)
+	if err != nil {
+		return fmt.Errorf("get location name: %w", err)
+	}
+
+	msgText := formatWeather(weather, location)
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
+
+	if _, err := bot.Send(msg); err != nil {
+		return fmt.Errorf("send message: %w", err)
+	}
+
+	return nil
 }

@@ -9,14 +9,13 @@ import (
 )
 
 func TestBuildAPIURL(t *testing.T) {
-	request := APIRequest{
-		Latitude:  68.882393,
-		Longitude: 81.000045,
-	}
-
 	weatherClient := NewWeatherClient(http.DefaultClient, "test-key")
 
-	got := weatherClient.buildAPIURL("/data/2.5/weather", request)
+	got := weatherClient.buildAPIURL(
+		weatherEndpoint,
+		68.882393,
+		81.000045,
+	)
 
 	expected := "https://api.openweathermap.org/data/2.5/weather?lat=68.882393&lon=81.000045&appid=test-key"
 

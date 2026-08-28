@@ -13,6 +13,12 @@ const (
 	geocodingEndpoint = "/geo/1.0/reverse"
 )
 
+type APIRequest struct {
+	Latitude  float64
+	Longitude float64
+	APIKey    string
+}
+
 type LocationResponse struct {
 	Name    string `json:"name"`
 	Country string `json:"country"`
@@ -86,4 +92,15 @@ func (w *WeatherClient) getJSON(url string, result interface{}) error {
 	}
 
 	return nil
+}
+
+func buildAPIURL(endpoint string, request APIRequest) string {
+	return fmt.Sprintf(
+		"%s%s?lat=%f&lon=%f&appid=%s",
+		openWeatherBaseURL,
+		endpoint,
+		request.Latitude,
+		request.Longitude,
+		request.APIKey,
+	)
 }

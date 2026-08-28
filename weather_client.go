@@ -16,7 +16,6 @@ const (
 type APIRequest struct {
 	Latitude  float64
 	Longitude float64
-	APIKey    string
 }
 
 type LocationResponse struct {
@@ -40,10 +39,9 @@ func (w *WeatherClient) getWeather(latitude, longitude float64) (WeatherResponse
 	request := APIRequest{
 		Latitude:  latitude,
 		Longitude: longitude,
-		APIKey:    w.apiKey,
 	}
 
-	url := buildAPIURL(weatherEndpoint, request)
+	url := w.buildAPIURL(weatherEndpoint, request)
 
 	var weather WeatherResponse
 
@@ -58,10 +56,9 @@ func (w *WeatherClient) getLocationName(latitude, longitude float64) (LocationRe
 	request := APIRequest{
 		Latitude:  latitude,
 		Longitude: longitude,
-		APIKey:    w.apiKey,
 	}
 
-	url := buildAPIURL(geocodingEndpoint, request)
+	url := w.buildAPIURL(geocodingEndpoint, request)
 
 	var locations []LocationResponse
 
@@ -94,13 +91,13 @@ func (w *WeatherClient) getJSON(url string, result interface{}) error {
 	return nil
 }
 
-func buildAPIURL(endpoint string, request APIRequest) string {
+func (w *WeatherClient) buildAPIURL(endpoint string, request APIRequest) string {
 	return fmt.Sprintf(
 		"%s%s?lat=%f&lon=%f&appid=%s",
 		openWeatherBaseURL,
 		endpoint,
 		request.Latitude,
 		request.Longitude,
-		request.APIKey,
+		w.apiKey,
 	)
 }

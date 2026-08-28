@@ -12,12 +12,13 @@ func TestBuildAPIURL(t *testing.T) {
 	request := APIRequest{
 		Latitude:  68.882393,
 		Longitude: 81.000045,
-		APIKey:    "test-key",
 	}
 
-	got := buildAPIURL("https://example.com/weather", request)
+	weatherClient := NewWeatherClient(http.DefaultClient, "test-key")
 
-	expected := "https://example.com/weather?lat=68.882393&lon=81.000045&appid=test-key"
+	got := weatherClient.buildAPIURL("/data/2.5/weather", request)
+
+	expected := "https://api.openweathermap.org/data/2.5/weather?lat=68.882393&lon=81.000045&appid=test-key"
 
 	if got != expected {
 		t.Errorf("unexpected URL:\nwant: %s\ngot:  %s", expected, got)
